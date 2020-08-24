@@ -139,6 +139,12 @@ poetry-export: layer-tmpdir
 	poetry export $${EXPORT_ARGS} --extras pyarrow
 	sed -e 's/^-e //g' requirements.txt > $(LIB_TMPDIR)/requirements_pyarrow.txt
 
+	poetry export $${EXPORT_ARGS} --extras sql
+	sed -e 's/^-e //g' requirements.txt > $(LIB_TMPDIR)/requirements_sql.txt
+
+	poetry export $${EXPORT_ARGS} --extras gis --extras sql
+	sed -e 's/^-e //g' requirements.txt > $(LIB_TMPDIR)/requirements_gis-sql.txt
+
 	rm -f requirements.txt
 	rm -rf dist/*
 	poetry build
@@ -155,7 +161,8 @@ init: poetry
 		--extras gis \
 		--extras pyarrow \
 		--extras fastparquet \
-		--extras s3fs
+		--extras s3fs \
+		--extras sql
 	@poetry run python -m pip check
 
 poetry:
