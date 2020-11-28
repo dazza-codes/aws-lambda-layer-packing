@@ -20,7 +20,6 @@ create a pip wheel for the project. The layer zip archives are generated in
 - `make docker-test-run` runs the docker test image
   - this runs a pytest suite on a pip installation that is like the layer
   - this is not a trivial test setup and test suite (it might be fragile)
-- `make docker-shell` drops into a bash shell in the test docker container
 - `make layer-package` builds one or more lambda layers
   - it reports on the location of the layer artifacts and their sizes
   - it does not publish anything to AWS S3 or Lambda
@@ -123,31 +122,33 @@ Also consider what is supported by aiobotocore, see:
 
 - https://github.com/aio-libs/aiobotocore/blob/master/setup.py
 
-release 0.12.0 of aiobotocore uses:
-
-```text
-1.15.3 < botocore < 1.15.16
-boto3 == 1.12.3
-```
-
 To view the packages installed in the [lambci/lambda](https://hub.docker.com/r/lambci/lambda/)
-image for python (3.6):
+image for python (3.6, as of Nov, 2020):
 
 ```sh
-bash-4.2# ls -1d /var/runtime/*.dist-info
-/var/runtime/boto3-1.12.49.dist-info
-/var/runtime/botocore-1.15.49.dist-info
-/var/runtime/docutils-0.15.2.dist-info
-/var/runtime/jmespath-0.9.5.dist-info
+$ make docker-boto-libs
+...
+/var/runtime/boto3-1.15.16.dist-info
+/var/runtime/botocore-1.18.16.dist-info
+/var/runtime/botocore-1.18.18.dist-info  # weird - two botocore versions!
+/var/runtime/certifi-2020.6.20.dist-info
+/var/runtime/chardet-3.0.4.dist-info
+/var/runtime/idna-2.10.dist-info
+/var/runtime/jmespath-0.10.0.dist-info
 /var/runtime/python_dateutil-2.8.1.dist-info
 /var/runtime/s3transfer-0.3.3.dist-info
-/var/runtime/six-1.14.0.dist-info
-/var/runtime/urllib3-1.25.9.dist-info
+/var/runtime/six-1.15.0.dist-info
+/var/runtime/urllib3-1.25.11.dist-info
+...
 ```
 
 The `layer_create_zip.sh:clean_aws_packages` function will remove all
 of these SDK packages from layer zip files.  It might not discriminate
-package versions that differ from the SDK versions.
+package versions that differ from the SDK versions.  (It currently
+requires checking boto* package specs in `pyproject.toml`, `requirements.dev`
+and the `layer_create_zip.sh:pin_lambda_sdk` function; some manual specs are
+required because the actual AWS Lambda production system might be using older
+versions than those actually in the docker image at the time of running a container.)
 
 The `lambda/layer_builds.sh` will use the SDK versions provided to
 try to pin dependencies to those versions.  For project dependencies
