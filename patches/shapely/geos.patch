@@ -1,0 +1,12 @@
+--- /tmp/tmp_venv_Hqy6DV/lib/python3.6/site-packages/shapely/geos.py	2020-10-30 21:37:34.758873368 -0700
++++ patches/shapely/geos.py	2020-10-30 21:41:08.426873368 -0700
+@@ -67,7 +67,8 @@
+     # Test to see if we have a wheel repaired by 'auditwheel' containing its
+     # own libgeos_c
+     geos_whl_so = glob.glob(os.path.abspath(os.path.join(os.path.dirname(
+-        __file__), '.libs/libgeos_c-*.so.*')))
++        __file__), '.libs', 'libgeos_c-*.so.*')))
++    geos_whl_so = [so for so in geos_whl_so if 'fiona' not in so]
+     if len(geos_whl_so) == 1:
+         _lgeos = CDLL(geos_whl_so[0])
+         LOG.debug("Found GEOS DLL: %r, using it.", _lgeos)

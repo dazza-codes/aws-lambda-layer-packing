@@ -16,18 +16,24 @@ SCRIPT_PATH=$(readlink -f "$SCRIPT_PATH")
 ZIP_PATH=${ZIP_PATH:-'/tmp'}
 ZIP_PATH=$(readlink -f "$ZIP_PATH")
 
-PY_VERSION=$(python --version | grep -o -E '[0-9]+[.][0-9]+')
+PYTHON_VER=$(python --version | grep -o -E '[0-9]+[.][0-9]+')
 
-LIB_PREFIX=${LIB_PREFIX}
+LIB_DEV=${LIB_DEV:-''}
+
+test -n "${LIB_NAME}" || echo "LIB_NAME env-var must be defined" && exit 1
+test -n "${LIB_PREFIX}" || echo "LIB_PREFIX env-var must be defined" && exit 1
+
+test -n "${AWS_ACCOUNT}" || echo "AWS_ACCOUNT env-var must be defined" && exit 1
+test -n "${AWS_DEFAULT_REGION}" || echo "AWS_DEFAULT_REGION env-var must be defined" && exit 1
+test -n "${S3_BUCKET}" || echo "S3_BUCKET env-var must be defined" && exit 1
 
 LAMBDA_REGION=${AWS_DEFAULT_REGION}
 LAMBDA_ACCOUNT=${AWS_ACCOUNT}
-LAMBDA_BUCKET=${LAMBDA_BUCKET}
 LAMBDA_LICENSE=${LAMBDA_LICENSE:-'PRIVATE'}
 
-S3_PREFIX=${S3_PREFIX:-'lambda-layers'}
-S3_ROOT=s3://${LAMBDA_BUCKET}/${S3_PREFIX}
-echo "$S3_ROOT"
+S3_PREFIX=${S3_PREFIX:-"lambda-layers/${LIB_NAME}"}
+S3_ROOT=s3://${S3_BUCKET}/${S3_PREFIX}
+aws s3 ls "$S3_ROOT" > /dev/null || echo "S3 listing failed" && exit 1
 
 crash () {
   echo "OOPS - something went wrong!"
@@ -54,7 +60,7 @@ create_or_update_layer () {
   rm -f "${ver_json}"
   aws lambda list-layer-versions \
     --layer-name "${layer_arn}" \
-    --compatible-runtime "python${PY_VERSION}" \
+    --compatible-runtime "python${PYTHON_VER}" \
     --no-paginate --output json > "${ver_json}"
 
   if [ -f "${ver_json}" ] && [ -s "${ver_json}" ]; then
@@ -97,13 +103,18 @@ create_or_update_layer () {
     --layer-name "${layer_arn}" \
     --description "${layer_name}" \
     --license-info "${LAMBDA_LICENSE}" \
-    --content S3Bucket="${LAMBDA_BUCKET}",S3Key="${S3_PREFIX}/${file_name}" \
-    --compatible-runtimes "python${PY_VERSION}"
+    --content S3Bucket="${S3_BUCKET}",S3Key="${S3_PREFIX}/${file_name}" \
+    --compatible-runtimes "python${PYTHON_VER}"
 
   echo
 }
 
-cp -p "${ZIP_PATH}/${LIB_PREFIX}"*.zip ./
+if [ -n "$LIB_DEV" ]; then
+  rm -f ./"${LIB_PREFIX}"*.zip
+  cp -p "${ZIP_PATH}/${LIB_DEV}" ./
+else
+  cp -p "${ZIP_PATH}/${LIB_PREFIX}"*.zip ./
+fi
 
 aws s3 sync ./ "${S3_ROOT}"/ --exclude '*' --include '*.zip' --dryrun
 

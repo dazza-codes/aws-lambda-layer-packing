@@ -24,47 +24,99 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = ">=3.6.1,<4.0.0"  # see tox below too
 dataclasses = {version = "*", python = "~3.6.0"}
 
+# boto3 and things that depend on it; patch updates OK, see:
+# https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
+# Also consider what is supported by aiobotocore, see:
+# https://github.com/aio-libs/aiobotocore/blob/master/setup.py
+boto3 = "~1.15.0"
+botocore = "~1.18.0"
+s3fs = "^0.4.2"
+
+#
+# package versions are pinned and also used in lambda/*.sh builds
+#
+
+numpy = "^1.18.1"  # and things depending on numpy
+geopandas = "^0.8.0"  # includes pandas
+pandas = "^1.1"
+geojson = "^2.5.0"
+fiona = "^1.8.13"  # for geopandas
+pyproj = "2.6.1"  # updates to proj 7
+shapely = "^1.7.1"  # for geopandas
+
+rasterio = "^1.1.7"
+rasterstats = "0.14.0"
+s2sphere = "^0.2.5"
+
 # utils
+pydantic = {extras = ["dotenv"], version = "^1.7.2"}
 requests = "^2.23"
 
-#
-# Optional parquet packages
-#
-pyarrow = { version = "^1.0", optional = true }
-fastparquet = { version = "*", optional = true }
-s3fs = { version = "*", optional = true }
 
-# Optional GIS packages
-# - binary wheels provide gdal and proj binaries
-# - TODO: review github projects for CI versions
 #
-numpy = { version = "^1.18.1", optional = true }
-geopandas = { version = "^0.6.1", optional = true }
-geojson = { version = "^2.5.0", optional = true }
-fiona = { version = "^1.8.13", optional = true }  # for geopandas
+# optional packages
+#
+dask = {version = "^2.10", extras = ["complete"], optional = true}
+
+jupyterlab = {version = "^2.2.9", optional = true}
+ipyparallel = {version = "^6.3.0", optional = true}
+
 pycrs = { version = "^1.0.1", optional = true }
-pyproj = { version = "2.4.2", optional = true }  # for geopandas
-shapely = { version = "1.7.0", optional = true } # for geopandas
-rasterio = { version = "1.1.2", optional = true }
-rasterstats = { version = "0.14.0", optional = true }
-s2sphere = { version = "^0.2.5", optional = true }
+geopy = { version = "^2.0", optional = true }
+pyepsg = {version = "^0.4.0", optional = true}
+
+bokeh = {version = "^2.1.1", optional = true}
+contextily = {version = "^1.0.1", optional = true}
+matplotlib = {version = "^3.3.2", optional = true}
+seaborn = {version = "^0.11.0", optional = true}
+
+netcdf4 = { version = "^1.5.4", optional = true }
+scipy = {version = "^1.5.3", optional = true}
+xarray = {version = "^0.16.1", optional = true}
+zarr = {version = "^2.5.0", optional = true}
+
+# Optional Parquet packages
+pyarrow = { version = "^1.0.0", optional = true }
 
 # Optional SQL packages
 geoalchemy2 = {version = "^0.8.4", optional = true}
 aws-psycopg2 = {version = "~1.2", optional = true}
 
+pendulum = {version = "^2.1.2", optional = true}
 
 [tool.poetry.extras]
+all = [
+    # Graphics
+    "bokeh",
+    "contextily",
+    "matplotlib",
+    "seaborn",
+    # GIS
+    "geopy",
+    "pyepsg",
+    # Parquet
+    "pyarrow",
+    # Sci
+    "dask",
+    "netcdf4",
+    "scipy",
+    "xarray",
+    "zarr",
+    # SQL
+    "aws-psycopg2",
+    "geoalchemy2",
+    # Utils
+    "pendulum",
+]
 
 gis =[
     "numpy",
     "geopandas",
     "geojson",
     "fiona",
-    "pycrs",
     "pyproj",
     "shapely",
     "rasterio",
@@ -72,14 +124,46 @@ gis =[
     "s2sphere",
 ]
 
+geopy = ["geopy"]
+pycrs = ["pycrs"]
+pyepsg = ["pyepsg"]
+
+bokeh = ["bokeh"]
+contextily = ["contextily"]
+matplotlib = ["matplotlib"]
+seaborn = ["seaborn"]
+graphics = [
+    "bokeh",
+    "contextily",
+    "matplotlib",
+    "seaborn",
+]
+jupyter = [
+    "jupyterlab",
+    "ipyparallel"
+]
+
+dask = ["dask"]
+netcdf4 = ["netcdf4"]
+scipy = ["scipy"]
+xarray = ["xarray"]
+zarr = ["zarr"]
+sci = [
+    "dask",
+    "numpy",
+    "pandas",
+    "scipy",
+    "netcdf4",
+    "xarray",
+    "zarr",
+]
+
+pyarrow = ["pyarrow"]
+
 sql = [
     "aws-psycopg2",
     "geoalchemy2"
 ]
-
-pyarrow = ["pyarrow"]
-fastparquet = ["fastparquet"]
-s3fs = ["s3fs"]
 
 
 [tool.poetry.dev-dependencies]
@@ -90,23 +174,10 @@ s3fs = ["s3fs"]
 # this also helps to avoid excess conflicts between dev-deps
 # and actual project dependencies.  It is not as reliable
 # as using poetry to manage it all, so liberal use of
-# 'pip check' is recommended.
+# 'pip check' is recommended.  Only add some minimal,
+# essentials dev-deps here so poetry+pip works OK.
 
-# Pin all the AWS SDK libs provided by AWS lambda
-# - see also lambda/layer_builds.sh and note that
-#   all these libs are removed from lambda layers
-# - adding them here as dev-deps could force poetry
-#   to constrain these versions when it tries to
-#   resolve version compatibility for the app-deps;
-#   without adding all these to the app-deps.
-boto3 = '1.12.49'
-botocore = '1.15.49'
-docutils = '0.15.2'
-jmespath = '0.9.5'
-python_dateutil = '2.8.1'
-s3transfer = '0.3.3'
-six = '1.14.0'
-urllib3 = '1.25.9'
+pytest = "^6.1.2"
 
 
 [build-system]

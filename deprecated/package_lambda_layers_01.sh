@@ -1,23 +1,5 @@
 #!/bin/bash
 
-# See also
-# https://docs.aws.amazon.com/lambda/latest/dg/limits.html
-# - Function and layer storage: 75 GB
-# - Deployment package size
-#   - 50 MB (zipped, for direct upload)
-#   - 250 MB (unzipped, including layers)
-#   - 3 MB (console editor)
-#
-# https://medium.com/@korniichuk/lambda-with-pandas-fd81aa2ff25e
-# https://aws.amazon.com/blogs/aws/new-for-aws-lambda-use-any-programming-language-and-share-common-components/
-# - AWSLambda-Python36-SciPy1x is a public lambda layer with numpy and scipy
-#   - scipy 1.1.0
-#   - numpy 1.15.4
-
-# To sync layers to s3
-# cp /tmp/*.zip layers/
-# aws s3 sync layers/ s3://project-bucket/lambda-layers/
-
 prefix="${PREFIX:-/opt}"
 
 py_version="${PY_VERSION:-3.6}"
@@ -65,9 +47,6 @@ pushd "${prefix}" || crash
 #
 # Also consider what is supported by aiobotocore, see:
 # https://github.com/aio-libs/aiobotocore/blob/master/setup.py
-# release 0.12.0 uses:
-# 1.15.3 < botocore < 1.15.16
-# boto3 == 1.12.3
 
 
 BOTO3='boto3==1.12.3'
@@ -91,6 +70,43 @@ ZARR='zarr==2.4.0'
 PYPROJ='pyproj==2.4.2'  # for rasterio/CRS
 RASTERIO='rasterio==1.1.2'
 S2SPHERE='s2sphere==0.2.5'
+
+PG8000='pg8000==1.15.2'
+BS4='beautifulsoup4==4.9.0'
+XMLTODICT='xmltodict==0.12.0'
+
+
+rm -rf "${dst:?}"/*
+python -m pip install -t "$dst" "${DATACLASSES}" "${BS4}"
+clean_python_packages "$dst"
+python -m pip list --path "$dst"
+zip_file="/tmp/${layer_package}_beautifulsoup4.zip"
+rm -f "${zip_file}"
+zip -q -r9 --symlinks "${zip_file}" python
+unzip -q -t "${zip_file}" || crash
+echo "created ${zip_file}"
+
+
+rm -rf "${dst:?}"/*
+python -m pip install -t "$dst" "${DATACLASSES}" "${PG8000}"
+clean_python_packages "$dst"
+python -m pip list --path "$dst"
+zip_file="/tmp/${layer_package}_pg8000.zip"
+rm -f "${zip_file}"
+zip -q -r9 --symlinks "${zip_file}" python
+unzip -q -t "${zip_file}" || crash
+echo "created ${zip_file}"
+
+
+rm -rf "${dst:?}"/*
+python -m pip install -t "$dst" "${DATACLASSES}" "${XMLTODICT}"
+clean_python_packages "$dst"
+python -m pip list --path "$dst"
+zip_file="/tmp/${layer_package}_xmltodict.zip"
+rm -f "${zip_file}"
+zip -q -r9 --symlinks "${zip_file}" python
+unzip -q -t "${zip_file}" || crash
+echo "created ${zip_file}"
 
 
 rm -rf "${dst:?}"/*
