@@ -145,6 +145,22 @@ clean_fastparquet () {
   fi
 }
 
+clean_psycopg2 () {
+  site=$1
+  # aws-psycopg2 installs all platforms, remove everything that it not linux
+  if [ -d "${site}/psycopg2" ]; then
+    echo "Cleaning psycopg2 in $site ..."
+    find "${site}/psycopg2" -type f -name '*.dylib' -exec rm {} \;
+    find "${site}/psycopg2" -type f -name '*-win*.pyd' -exec rm {} \;
+    find "${site}/psycopg2" -type f -name '*-darwin.so' -exec rm {} \;
+    find "${site}/psycopg2" -type f -name '*-i386-linux-gnu.so' -exec rm {} \;
+    py_ver=$(python --version | grep -o -E '[0-9]+[.][0-9]+' | sed 's/\.//g')
+    for ver in $(echo "34 35 36 37 38 39" | sed "s/$py_ver//g"); do
+      find "${site}/psycopg2" -type f -name "*.cpython-${ver}*.so" -exec rm {} \;
+    done
+  fi
+}
+
 hack_shared_libs () {
   site=$1
 
@@ -288,6 +304,7 @@ create_layer_zip () {
   clean_numpy "$package_dst"
   clean_pandas "$package_dst"
   clean_pydantic "$package_dst"
+  clean_psycopg2 "$package_dst"
   clean_fastparquet "$package_dst"
 
 #  #
