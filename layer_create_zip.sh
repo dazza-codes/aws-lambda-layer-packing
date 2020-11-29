@@ -15,6 +15,46 @@ crash () {
   exit 1
 }
 
+# Pin the AWS SDK lambda packages to the provided versions, so
+# they can be removed from lambda layers.  The strategy is to
+# add the SDK libs as explicit requirements to every layer build
+# and then remove them from the build.  The `create_layer_zip`
+# function will call `clean_aws_packages` to remove the AWS SDK
+# libs listed below.
+#
+# fix boto3 and botocore to the current lambda layer versions
+# https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
+#
+# This could also help to detect when a project dependency requires a version of these
+# AWS SDK libs that is different from the lambda versions.  To get this list:
+# `ls -1d /var/runtime/*.dist-info` in the lambci container.  These are
+# essentially the `boto3` library and the dependency tree it requires.
+
+## Note that getting these dynamically as follows could result in versions
+## that are not documented or in the lambda container, if any pip installations
+## have run to override those versions; so manual updates below are required.
+#BOTO3_VERSION=$(python -c 'import boto3; print(boto3.__version__)')
+#BOTOCORE_VERSION=$(python -c 'import botocore; print(botocore.__version__)')
+
+pin_lambda_sdk () {
+  requirements_file=$1
+  # remove and replace all the AWS SDK libs
+  sed -i '/^boto3/d' "${requirements_file}"
+  sed -i '/^botocore/d' "${requirements_file}"
+  sed -i '/^docutils/d' "${requirements_file}"
+  sed -i '/^jmespath/d' "${requirements_file}"
+  sed -i '/^python_dateutil/d' "${requirements_file}"
+  sed -i '/^s3transfer/d' "${requirements_file}"
+  sed -i '/^six/d' "${requirements_file}"
+  sed -i '/^urllib3/d' "${requirements_file}"
+
+  cat >> "${requirements_file}" <<REQUIREMENTS
+boto3~=1.15.16
+botocore~=1.18.16
+REQUIREMENTS
+}
+
+
 clean_python_metadata () {
   site=$1
   echo "Cleaning python package metadata from $site ..."
@@ -211,40 +251,6 @@ clean_aws_packages () {
 #  location=$(awk '/Location/ { print $2 }' /tmp/package_files.txt)
 #  files=$(grep -E "^\s+" /tmp/package_files.txt | sed "s#${package}#${location}/${package}#g")
 #}
-
-# Pin the AWS SDK lambda packages to the provided versions, so
-# they can be removed from lambda layers.  The strategy is to
-# add the SDK libs as explicit requirements to every layer build
-# and then remove them from the build.  The `create_layer_zip`
-# function will call `clean_aws_packages` to remove the AWS SDK
-# libs listed below.
-#
-# fix boto3 and botocore to the current lambda layer versions
-# https://docs.aws.amazon.com/lambda/latest/dg/lambda-python.html
-#
-# This could also help to detect when a project dependency requires a version of these
-# AWS SDK libs that is different from the lambda versions.  To get this list:
-# `ls -1d /var/runtime/*.dist-info` in the lambci container.  These are
-# essentially the `boto3` library and the dependency tree it requires.
-
-pin_lambda_sdk () {
-  requirements_file=$1
-  # remove and replace all the AWS SDK libs
-  sed -i '/^boto3/d' "${requirements_file}"
-  sed -i '/^botocore/d' "${requirements_file}"
-  sed -i '/^docutils/d' "${requirements_file}"
-  sed -i '/^jmespath/d' "${requirements_file}"
-  sed -i '/^python_dateutil/d' "${requirements_file}"
-  sed -i '/^s3transfer/d' "${requirements_file}"
-  sed -i '/^six/d' "${requirements_file}"
-  sed -i '/^urllib3/d' "${requirements_file}"
-
-  cat >> "${requirements_file}" <<REQUIREMENTS
-boto3~=1.15.16
-botocore~=1.18.16
-REQUIREMENTS
-}
-
 
 create_layer_zip () {
 
