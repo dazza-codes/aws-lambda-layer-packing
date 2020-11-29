@@ -99,7 +99,7 @@ init: poetry
 .PHONY: docker-test-build docker-test-shell docker-test-run
 
 docker-boto-libs: layer-tstdir
-	cp lambda_versions.py $(LIB_TSTDIR)/
+	cp lambda_project/lambda_versions.py $(LIB_TSTDIR)/
 	docker run --rm \
 		-v $(LIB_TSTDIR)/:/var/task:ro,delegated \
 		lambci/lambda:python$(PYTHON_VER) \

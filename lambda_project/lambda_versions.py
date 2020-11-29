@@ -5,6 +5,7 @@ Lambda Library Versions
 This lambda function handler prints built-in package versions.
 
 """
+from typing import Dict
 
 import boto3
 import botocore
@@ -19,15 +20,7 @@ import pprint
 import sysconfig
 
 
-def lambda_handler(event, context):
-
-    os.system("ls -1d /var/runtime/*.dist-info | sort")
-    print()
-
-    sys_paths = sysconfig.get_paths()
-    pprint.pprint(sys_paths)
-    print()
-
+def boto_versions() -> Dict:
     versions = {
         "boto3": boto3.__version__,
         "botocore": botocore.__version__,
@@ -37,6 +30,19 @@ def lambda_handler(event, context):
         "six": six.__version__,
         "urllib3": urllib3.__version__,
     }
+    return versions
+
+
+def lambda_handler(event, context):
+
+    os.system("ls -1d /var/runtime/*.dist-info | sort")
+    print()
+
+    sys_paths = sysconfig.get_paths()
+    pprint.pprint(sys_paths)
+    print()
+
+    versions = boto_versions()
     pprint.pprint(versions)
     print()
 
